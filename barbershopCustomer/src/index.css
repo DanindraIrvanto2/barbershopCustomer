@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #fafafa;
+    color: #111111;
+    overflow-x: hidden;
+  }
+}
+
+.font-editorial-serif {
+  font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  font-style: italic;
+}
+
+.font-mono-spaced {
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.05em;
+}
+
+.font-headline {
+  font-family: 'Plus Jakarta Sans', 'Syne', sans-serif;
+}
