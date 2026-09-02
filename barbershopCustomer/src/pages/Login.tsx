@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { loginbyemail, loginbyphone } from '../api/authApi';
 
 export default function Login() {
   const navigate = useNavigate();
 
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -15,159 +17,209 @@ export default function Login() {
     setError('');
     setIsLoading(true);
 
-    setTimeout(() => {
-      // Dummy check
-      if (email === 'member@gmail.com' && password === '123456') {
-        localStorage.setItem('token', 'dummy-token');
-        navigate('/');
-      } else if (!email || !password) {
-        setError('Harap isi email dan password.');
+    try {
+      if (loginMethod === 'email') {
+        if (!email || !password) {
+          setError('Email dan password wajib diisi.');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await loginbyemail({
+          email,
+          password,
+        });
+
+        console.log('Login by email successful:', response);
+
+        localStorage.setItem('token', response.token);
+        if (response.customer) {
+          localStorage.setItem('customer', JSON.stringify(response.customer));
+        }
+        navigate('/booking');
       } else {
-        setError('Email atau password tidak sesuai.');
+        if (!phone) {
+          setError('Nomor handphone wajib diisi.');
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await loginbyphone({
+          phone,
+        });
+
+        console.log('Login by phone successful:', response);
+
+        localStorage.setItem('token', response.token);
+        if (response.customer) {
+          localStorage.setItem('customer', JSON.stringify(response.customer));
+        }
+        navigate('/booking');
       }
+    } catch (error: any) {
+      console.error('Login failed:', error);
+
+      const errorMessage =
+        error?.response?.data?.message ||
+        (loginMethod === 'email'
+          ? 'Email atau password tidak sesuai.'
+          : 'Nomor handphone tidak terdaftar.');
+
+      setError(errorMessage);
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
-  const handleFillDemo = () => {
-    setEmail('member@gmail.com');
-    setPassword('123456');
+  const toggleLoginMethod = () => {
     setError('');
+    setLoginMethod((prev) => (prev === 'email' ? 'phone' : 'email'));
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] text-[#111111] font-sans selection:bg-black selection:text-white flex flex-col justify-between px-6 md:px-12 lg:px-16 py-6 md:py-8">
-      {/* Top Header */}
+    <div className="min-h-screen bg-[#fafafa] text-[#111111] font-sans flex flex-col justify-between px-6 md:px-12 lg:px-16 py-6 md:py-8">
+
+      {/* Header */}
       <header className="flex items-center justify-between w-full max-w-6xl mx-auto">
-        <Link to="/" className="inline-block group">
+        <Link to="/" className="inline-block">
           <img
             src="/logo.jpg"
             alt="Hair Dept. Barbershop"
-            className="h-16 sm:h-20 w-auto object-contain mix-blend-multiply transition-transform group-hover:scale-105"
+            className="h-16 sm:h-20 w-auto object-contain mix-blend-multiply"
           />
         </Link>
 
         <Link
           to="/"
-          className="text-[11px] sm:text-[12px] font-semibold tracking-wider uppercase hover:opacity-60 transition-opacity"
+          className="text-[11px] sm:text-[12px] font-light tracking-widest uppercase hover:opacity-50 transition"
         >
-          ( BACK TO HOME )
+          ( HOME )
         </Link>
       </header>
 
-      {/* Main Form Section */}
-      <main className="my-auto py-8 w-full max-w-md mx-auto">
-        <div className="border border-black bg-white p-8 sm:p-10 shadow-sm relative">
-          {/* Header Title */}
-          <div className="text-center mb-8">
-            <div className="text-[10px] font-bold tracking-[0.25em] uppercase text-gray-500 mb-2">
-              ( MEMBER ACCESS )
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-light tracking-tight">
-              SIGN <span className="font-editorial-serif italic font-normal">in</span>
-            </h1>
-            <p className="mt-2 text-xs text-gray-600">
-              Masuk untuk melanjutkan pemesanan &amp; layanan grooming eksklusif Anda.
-            </p>
+      {/* Login Form */}
+      <main className="my-auto py-12 w-full max-w-md mx-auto">
+
+        <div className="text-center mb-10">
+          <h1 className="text-4xl sm:text-5xl font-light tracking-[-0.02em]">
+            SIGN <span className="font-editorial-serif italic">in.</span>
+          </h1>
+        </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div className="mb-6 p-3 border border-red-500/30 bg-red-50/50 text-red-700 text-xs text-center">
+            {error}
           </div>
+        )}
 
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-center gap-2">
-              <span>⚠️</span>
-              <span>{error}</span>
-            </div>
-          )}
+        <form onSubmit={handleLogin} className="space-y-6">
 
-          {/* Form */}
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email Field */}
-            <div>
+          {/* Email / Phone Field */}
+          {loginMethod === 'email' ? (
+            <div className="space-y-2">
               <label
                 htmlFor="email"
-                className="block text-[11px] font-bold tracking-wider uppercase mb-1.5"
+                className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
               >
-                Email Address
+                Email
               </label>
+
               <input
                 id="email"
                 type="email"
-                required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="nama@email.com"
-                className="w-full border border-black px-3.5 py-2.5 text-sm bg-transparent placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-black transition"
+                placeholder="Email"
+                className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
               />
             </div>
+          ) : (
+            <div className="space-y-2">
+              <label
+                htmlFor="phone"
+                className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
+              >
+                Phone Number
+              </label>
 
-            {/* Password Field */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label
-                  htmlFor="password"
-                  className="text-[11px] font-bold tracking-wider uppercase"
-                >
-                  Password
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-[10px] uppercase tracking-wider text-gray-500 hover:text-black transition"
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone Number"
+                className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
+              />
+            </div>
+          )}
+
+          {/* Password (Hanya muncul jika login via Email) */}
+          {loginMethod === 'email' && (
+            <div className="space-y-2">
+              <label
+                htmlFor="password"
+                className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
+              >
+                Password
+              </label>
+
               <input
                 id="password"
-                type={showPassword ? 'text' : 'password'}
-                required
+                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full border border-black px-3.5 py-2.5 text-sm bg-transparent placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-black transition"
+                placeholder="••••••••••••"
+                className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
               />
             </div>
+          )}
 
-            {/* Submit Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full border border-black bg-black text-white py-3 text-xs font-bold tracking-widest uppercase hover:bg-white hover:text-black transition-all shadow-sm active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-              >
-                {isLoading ? '( SIGNING IN... )' : '( SIGN IN NOW )'}
-              </button>
-            </div>
-          </form>
+          {/* Buttons */}
+          <div className="pt-4 space-y-3">
 
-          {/* Demo Account Helper */}
-          <div className="mt-6 pt-6 border-t border-gray-100 text-center">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full border border-black bg-black text-white hover:bg-white hover:text-black py-3 text-[11px] sm:text-[12px] font-light tracking-[0.2em] uppercase transition-all disabled:opacity-50 cursor-pointer"
+            >
+              {isLoading
+                ? '( PROCESSING... )'
+                : '( SIGN IN NOW )'}
+            </button>
+
             <button
               type="button"
-              onClick={handleFillDemo}
-              className="text-[10px] text-gray-500 hover:text-black underline underline-offset-4 transition tracking-wider uppercase cursor-pointer"
+              onClick={toggleLoginMethod}
+              className="w-full border border-black/30 bg-transparent text-black hover:border-black hover:bg-black/5 py-3 text-[11px] sm:text-[12px] font-light tracking-[0.15em] uppercase transition-all cursor-pointer"
             >
-              Gunakan Akun Demo (member@gmail.com)
+              {loginMethod === 'email'
+                ? '( SIGN IN WITH PHONE NUMBER )'
+                : '( SIGN IN WITH EMAIL )'}
             </button>
+
           </div>
 
           {/* Register Link */}
-          <div className="mt-4 text-center text-xs text-gray-600">
-            Belum menjadi member?{' '}
+          <div className="pt-6 text-center text-[11px] font-light text-gray-500">
+            Belum punya akun?{' '}
+
             <Link
               to="/register"
-              className="font-bold text-black hover:underline underline-offset-2 tracking-wide"
+              className="text-black font-normal underline underline-offset-4"
             >
-              ( DAFTAR SEKARANG )
+              ( DAFTAR MEMBER )
             </Link>
           </div>
-        </div>
+
+        </form>
       </main>
 
       {/* Footer */}
-      <footer className="w-full max-w-6xl mx-auto text-center text-xs text-gray-400 py-4">
-        © 2026 Hair Dept. Barbershop. All rights reserved.
+      <footer className="w-full max-w-6xl mx-auto text-center text-[11px] text-gray-400 font-light py-4">
+        © 2026 Hair Dept. All rights reserved.
       </footer>
+
     </div>
   );
 }
