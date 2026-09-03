@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Booking from './pages/Booking';
+import OrderHistory from './pages/OrderHistory';
 
 function App() {
   return (
@@ -13,6 +14,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/booking" element={<Booking />} />
+        <Route path="/history" element={<OrderHistory />} />
+        <Route path="/orders" element={<OrderHistory />} />
       </Routes>
     </BrowserRouter>
   );

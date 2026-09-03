@@ -1,14 +1,22 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { loginbyemail, loginbyphone } from '../api/authApi';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const stateEmail = location.state?.email || '';
+  const statePhone = location.state?.phone || '';
+  const successMessage = location.state?.successMessage || '';
+
+  const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>(
+    stateEmail ? 'email' : 'phone'
+  );
+  const [email, setEmail] = useState(stateEmail);
+  const [phone, setPhone] = useState(statePhone);
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -19,14 +27,14 @@ export default function Login() {
 
     try {
       if (loginMethod === 'email') {
-        if (!email || !password) {
+        if (!email.trim() || !password) {
           setError('Email dan password wajib diisi.');
           setIsLoading(false);
           return;
         }
 
         const response = await loginbyemail({
-          email,
+          email: email.trim(),
           password,
         });
 
@@ -38,14 +46,14 @@ export default function Login() {
         }
         navigate('/booking');
       } else {
-        if (!phone) {
+        if (!phone.trim()) {
           setError('Nomor handphone wajib diisi.');
           setIsLoading(false);
           return;
         }
 
         const response = await loginbyphone({
-          phone,
+          phone: phone.trim(),
         });
 
         console.log('Login by phone successful:', response);
@@ -60,6 +68,7 @@ export default function Login() {
       console.error('Login failed:', error);
 
       const errorMessage =
+        error?.response?.data?.error ||
         error?.response?.data?.message ||
         (loginMethod === 'email'
           ? 'Email atau password tidak sesuai.'
@@ -104,7 +113,19 @@ export default function Login() {
           <h1 className="text-4xl sm:text-5xl font-light tracking-[-0.02em]">
             SIGN <span className="font-editorial-serif italic">in.</span>
           </h1>
+          <p className="text-xs text-gray-400 mt-2 font-light tracking-wide">
+            {loginMethod === 'email'
+              ? 'Masuk menggunakan email dan password Anda'
+              : 'Masuk cepat menggunakan nomor handphone'}
+          </p>
         </div>
+
+        {/* Success Alert */}
+        {successMessage && !error && (
+          <div className="mb-6 p-3 border border-emerald-500/30 bg-emerald-50/50 text-emerald-800 text-xs text-center">
+            {successMessage}
+          </div>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -117,23 +138,60 @@ export default function Login() {
 
           {/* Email / Phone Field */}
           {loginMethod === 'email' ? (
-            <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
-              >
-                Email
-              </label>
+            <>
+              <div className="space-y-2">
+                <label
+                  htmlFor="email"
+                  className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
+                >
+                  Email
+                </label>
 
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
-              />
-            </div>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="nama@email.com"
+                  className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="password"
+                    className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
+                  >
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-[10px] font-light tracking-wider uppercase text-gray-400 hover:text-black transition cursor-pointer"
+                  >
+                    {showPassword ? '( HIDE )' : '( SHOW )'}
+                  </button>
+                </div>
+
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError('');
+                  }}
+                  placeholder="••••••••••••"
+                  className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
+                />
+              </div>
+            </>
           ) : (
             <div className="space-y-2">
               <label
@@ -146,30 +204,13 @@ export default function Login() {
               <input
                 id="phone"
                 type="tel"
+                required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Phone Number"
-                className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
-              />
-            </div>
-          )}
-
-          {/* Password (Hanya muncul jika login via Email) */}
-          {loginMethod === 'email' && (
-            <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-[11px] font-light tracking-widest uppercase text-gray-600"
-              >
-                Password
-              </label>
-
-              <input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (error) setError('');
+                }}
+                placeholder="Contoh: 081234567890"
                 className="w-full bg-transparent border-b border-black/30 focus:border-black py-2.5 text-sm outline-none"
               />
             </div>

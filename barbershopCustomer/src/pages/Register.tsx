@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { registerCustomer, loginbyphone } from '../api/authApi';
+import { registerCustomer } from '../api/authApi';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -43,22 +43,14 @@ export default function Register() {
         password: formData.password,
       });
 
-      // 2. Auto-login setelah berhasil register
-      try {
-        const loginRes = await loginbyphone({
+      // 2. Redirect ke halaman login tanpa auto-login langsung ke booking
+      navigate('/login', {
+        state: {
+          successMessage: 'Pendaftaran akun berhasil! Silakan masuk dengan email atau nomor handphone Anda.',
+          email: formData.email.trim(),
           phone: formData.phone.trim(),
-        });
-        if (loginRes?.token) {
-          localStorage.setItem('token', loginRes.token);
-          if (loginRes.customer) {
-            localStorage.setItem('customer', JSON.stringify(loginRes.customer));
-          }
-        }
-      } catch (err) {
-        console.log('Auto-login notice:', err);
-      }
-
-      navigate('/booking');
+        },
+      });
     } catch (err: any) {
       console.error('Registration error:', err);
 
